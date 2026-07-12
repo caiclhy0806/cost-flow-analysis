@@ -99,6 +99,7 @@
     <label>月份</label>
     <input type="month" id="monthPicker" />
     <button class="btn-primary" id="btnSave">💾 保存本月</button>
+    <button class="btn-primary" id="btnPublish">☁️ 发布到仓库</button>
     <button class="btn-ghost" id="btnNew">🆕 新建空白月</button>
     <button class="btn-ghost" id="btnExport">⬇️ 导出JSON</button>
     <button class="btn-ghost" id="btnImport">⬆️ 导入JSON</button>
@@ -183,7 +184,7 @@
     </div>
   </div>
 
-  <footer>本系统为内部管理分析工具，数据保存在本地浏览器（localStorage），可导出备份。财务口径以公司正式报表为准。</footer>
+  <footer>本系统为内部管理分析工具。数据可保存在本地浏览器（localStorage），亦可「发布到仓库」经每日自动化同步至 GitHub（线上站与仓库一致）。财务口径以公司正式报表为准。</footer>
 </div>
 
 <script>
@@ -545,6 +546,7 @@ function bindEvents(){
   document.getElementById('btnNew').onclick=()=>{ const m=document.getElementById('monthPicker').value||curMonth(); state=defaultState(m); renderAll(); flash('已新建空白月 '+m); };
   document.getElementById('btnDel').onclick=()=>{ if(confirm('确认删除 '+state.month+' 的数据？')){ deleteMonth(state.month); renderMonthList(); const idx=getIndex(); if(idx.length){switchMonth(idx[idx.length-1]);}else{state=defaultState(curMonth());renderAll();} flash('已删除'); } };
   document.getElementById('btnExport').onclick=exportJSON;
+  document.getElementById('btnPublish').onclick=publishToRepo;
   document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
   document.getElementById('fileImport').onchange=importJSON;
   document.getElementById('flowTarget').addEventListener('change', renderFlow);
@@ -583,6 +585,21 @@ function importJSON(e){
   };
   reader.readAsText(file);
 }
+function publishToRepo(){
+  const idx=getIndex();
+  if(!idx.length){ flash('没有可发布的数据，请先保存月份'); return; }
+  const data={version:1, months:{}};
+  idx.forEach(m=> data.months[m]=JSON.parse(localStorage.getItem(keyOf(m))));
+  fetch('/api/publish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+    .then(r=>r.json())
+    .then(j=>{ if(j&&j.ok){ flash('✅ 已写入仓库，稍后由每日自动化提交推送'); } else { throw new Error((j&&j.error)||'发布失败'); } })
+    .catch(err=>{ flash('⚠️ 发布失败：'+(err.message||err)+'（请确认本地服务 http://127.0.0.1:8765 已启动）'); });
+}
+function loadPublishedData(){
+  return fetch('data/costflow.json').then(r=>{ if(!r.ok) throw new Error('no data'); return r.json(); }).then(d=>{
+    if(d && d.months && typeof d.months==='object'){ Object.entries(d.months).forEach(([m,s])=> saveMonth(s)); }
+  }).catch(()=>{});
+}
 
 /* ====================== 初始化 ====================== */
 function curMonth(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1); }
@@ -597,6 +614,16 @@ function init(){
   document.getElementById('monthPicker').value=state.month;
   bindEvents();
   renderAll();
+  // 仅本地预览模式允许发布到仓库
+  const isLocal = ['127.0.0.1','localhost','0.0.0.0'].includes(location.hostname);
+  if(!isLocal){ const b=document.getElementById('btnPublish'); if(b){ b.disabled=true; b.style.opacity=.5; b.title='仅在本地预览(http://127.0.0.1:8765)时可发布到仓库'; } }
+  // 从仓库载入已发布数据（覆盖本地，使线上站与仓库一致）
+  loadPublishedData().then(()=>{
+    const idx=getIndex();
+    const cur = idx.includes(m)? m : (idx.length? idx[idx.length-1] : m);
+    switchMonth(cur);
+    if(idx.length) flash('已从仓库载入最新数据');
+  });
 }
 init();
 </script>
