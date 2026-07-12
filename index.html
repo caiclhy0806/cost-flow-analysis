@@ -565,8 +565,8 @@ function renderFlow(){
     ${diamond(grossX,160,DIA_RW,DIA_RH,C.diaGross,'毛利润',fmt(gross))}
     ${diamond(preTaxX,160,DIA_RW,DIA_RH,C.diaPre,'税前净利润',fmt(preTax))}`;
 
-  // --- 净利润（主水管右端向下汇入末端水池）+ 子池（可用库存 / 现金流） ---
-  const netDropX=980;
+  // --- 净利润（主水管最末端向下汇入末端水池）+ 子池（可用库存 / 现金流） ---
+  const netDropX=pipeX+pipeW;   // 平移到主水管最右端，不再落于水管内部
   const netNb={x:610,y:540,w:310,h:62};
   const netSVG=`
     <path d="M${netDropX} ${mainCY} L${netDropX} ${netNb.y+netNb.h/2} L${netNb.x+netNb.w-12} ${netNb.y+netNb.h/2}" fill="none" stroke="${C.net}" stroke-width="6" marker-end="url(#arrow)"/>
