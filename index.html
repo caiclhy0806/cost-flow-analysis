@@ -122,7 +122,7 @@
     </div>
     <div class="flowbox"><div id="flowChart"></div></div>
     <div class="note">
-      说明：顶部<b>加粗主水管=营业收入</b>（标题随查看对象变为「xx产品线 x月 营业收入」）；左侧分支流出<b>直接成本</b>并按明细像树枝在下一级展开，剩余为毛利润；中间分支流出<b>间接成本</b>并罗列研发/销售/管理一级分支，剩余为税前净利润；右侧小分支流出<b>税款</b>；末端水池为<b>净利润</b>。
+      说明：顶部<b>加粗主水管=营业收入</b>（标题随查看对象变为「xx产品线 x月 营业收入」）；左侧分支流出<b>直接成本</b>并按明细像树枝在下一级展开，主干上<b>菱形</b>标注<b>毛利润</b>；中间分支流出<b>间接成本</b>并罗列研发/销售/管理一级分支，主干上<b>菱形</b>标注<b>税前净利润</b>；<b>税款</b>已从右侧分支移出，置于主水管下游末端、<b>净利润</b>之前。
       下方两个子池分别展示期末<b>可用库存</b>与<b>经营现金流</b>。
     </div>
   </div>
@@ -489,10 +489,11 @@ function renderFlow(){
   const s = buildSeries(target);
   const gross = s.revenue - s.direct;
   const preTax = gross - s.indirect;
-  const W=1000,H=700;
-  const pipeX=40,pipeY=46,pipeW=864,pipeH=60,mainCY=pipeY+pipeH/2;   // 主水管加粗
-  const directX=210, indirectX=560, taxX=760;                       // 左 / 中 / 右
+  const W=1020,H=720;
+  const pipeX=40,pipeY=44,pipeW=790,pipeH=58,mainCY=pipeY+pipeH/2;   // 主水管加粗
+  const directX=200, indirectX=520;                                 // 左 / 中
   const dStartY=322,step=58,leafW=150,leafH=36;
+  const vpx=817,vpw=26,vcx=vpx+vpw/2;                               // 主水管下游竖向管
 
   const node=(x,y,w,h,fill,title,sub,fs)=>`
     <g>
@@ -506,59 +507,62 @@ function renderFlow(){
       <text x="${x+w/2}" y="${y+h/2-2}" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">${title}</text>
       <text x="${x+w/2}" y="${y+h/2+12}" text-anchor="middle" font-size="10.5" fill="#fff" opacity=".95">${sub}</text>
     </g>`;
+  const diamond=(cx,cy,rw,rh,fill,title,sub)=>`
+    <g>
+      <polygon points="${cx},${cy-rh} ${cx+rw},${cy} ${cx},${cy+rh} ${cx-rw},${cy}" fill="${fill}" stroke="rgba(0,0,0,.12)"/>
+      <text x="${cx}" y="${cy-1}" text-anchor="middle" font-size="12.5" font-weight="800" fill="#fff">${title}</text>
+      <text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="11" fill="#fff" opacity=".95">${sub}</text>
+    </g>`;
 
-  // --- 直接成本（左侧）：主水管分支 + 树枝状明细 ---
-  const dNb={x:directX-105,y:190,w:210,h:52};
+  // --- 直接成本（左侧）：主水管分支 + 树枝状明细（向左展开） ---
+  const dNb={x:directX-105,y:188,w:210,h:50};
   const dLastY=dStartY+(s.directParts.length-1)*step;
   let directSVG=`
     <line x1="${directX}" y1="${pipeY+pipeH}" x2="${directX}" y2="${dNb.y}" stroke="#dc2626" stroke-width="5" marker-end="url(#arrow)"/>
     ${node(dNb.x,dNb.y,dNb.w,dNb.h,'#dc2626','直接成本',fmt(s.direct),14)}
     <line x1="${directX}" y1="${dNb.y+dNb.h}" x2="${directX}" y2="${dLastY}" stroke="#dc2626" stroke-width="4"/>`;
   s.directParts.forEach((p,i)=>{
-    const ly=dStartY+i*step,left=i%2===0,lx=left?(directX-18-leafW):(directX+18);
-    directSVG+=`<line x1="${directX}" y1="${ly}" x2="${left?lx+leafW:lx}" y2="${ly}" stroke="#dc2626" stroke-width="3"/>`;
+    const ly=dStartY+i*step, lx=directX-18-leafW;
+    directSVG+=`<line x1="${directX}" y1="${ly}" x2="${lx+leafW}" y2="${ly}" stroke="#dc2626" stroke-width="3"/>`;
     directSVG+=leaf(lx,ly-18,leafW,leafH,'#ef4444',p.label,fmt(p.value));
   });
 
-  // --- 间接成本（中间）：主水管分支 + 一级分支（研发/销售/管理）---
-  const iNb={x:indirectX-105,y:190,w:210,h:52};
+  // --- 间接成本（中间）：主水管分支 + 一级分支（研发/销售/管理，向左展开）---
+  const iNb={x:indirectX-105,y:188,w:210,h:50};
   const iLastY=dStartY+(s.indirectParts.length-1)*step;
   let indirectSVG=`
     <line x1="${indirectX}" y1="${pipeY+pipeH}" x2="${indirectX}" y2="${iNb.y}" stroke="#ea580c" stroke-width="5" marker-end="url(#arrow)"/>
     ${node(iNb.x,iNb.y,iNb.w,iNb.h,'#ea580c','间接成本',fmt(s.indirect),14)}
     <line x1="${indirectX}" y1="${iNb.y+iNb.h}" x2="${indirectX}" y2="${iLastY}" stroke="#ea580c" stroke-width="4"/>`;
   s.indirectParts.forEach((p,i)=>{
-    const ly=dStartY+i*step,left=i%2===0,lx=left?(indirectX-18-leafW):(indirectX+18);
-    indirectSVG+=`<line x1="${indirectX}" y1="${ly}" x2="${left?lx+leafW:lx}" y2="${ly}" stroke="#ea580c" stroke-width="3"/>`;
+    const ly=dStartY+i*step, lx=indirectX-18-leafW;
+    indirectSVG+=`<line x1="${indirectX}" y1="${ly}" x2="${lx+leafW}" y2="${ly}" stroke="#ea580c" stroke-width="3"/>`;
     indirectSVG+=leaf(lx,ly-18,leafW,leafH,'#f97316',p.label,fmt(p.value));
   });
 
-  // --- 税款（右侧，小）---
-  const taxNb={x:taxX-60,y:196,w:120,h:44};
-  const taxSVG=`
-    <line x1="${taxX}" y1="${pipeY+pipeH}" x2="${taxX}" y2="${taxNb.y}" stroke="#7c3aed" stroke-width="4" marker-end="url(#arrow)"/>
-    ${node(taxNb.x,taxNb.y,taxNb.w,taxNb.h,'#7c3aed','税款',fmt(s.tax),13)}`;
-
-  // --- 净利润末端水池 + 子池（可用库存 / 现金流） + 进水管 ---
-  const netNb={x:470,y:545,w:300,h:64};
-  const netSVG=`
-    <path d="M${pipeX+pipeW} ${mainCY} L${pipeX+pipeW} 545 L${netNb.x+netNb.w-30} 545" fill="none" stroke="#16a34a" stroke-width="6" marker-end="url(#arrow)"/>
+  // --- 主水管下游（后侧竖向管）：税款 → 净利润（税款已移出主水管右侧分支） ---
+  const taxNb={x:vcx-55,y:182,w:110,h:42};
+  const netNb={x:vcx-150,y:348,w:300,h:62};
+  let downSVG=`
+    <rect x="${vpx}" y="${mainCY}" width="${vpw}" height="${netNb.y-mainCY}" fill="url(#water)"/>
+    ${node(taxNb.x,taxNb.y,taxNb.w,taxNb.h,'#7c3aed','税款',fmt(s.tax),13)}
     ${node(netNb.x,netNb.y,netNb.w,netNb.h,'#16a34a','净利润（末端）',fmt(s.net),14)}
-    ${node(470,623,145,46,'#2563eb','可用库存',fmt(s.inv),12)}
-    ${node(625,623,145,46,'#0891b2','经营现金流',fmt(s.cf),12)}`;
+    ${node(netNb.x,netNb.y+78,145,44,'#2563eb','可用库存',fmt(s.inv),12)}
+    ${node(netNb.x+155,netNb.y+78,145,44,'#0891b2','经营现金流',fmt(s.cf),12)}`;
 
-  // --- 标注：毛利润 / 税前净利润 ---
-  const labels=`
-    <text x="${(directX+indirectX)/2}" y="138" text-anchor="middle" font-size="12.5" fill="#16a34a" font-weight="700">↓ 扣直接成本后 毛利润 ${fmt(gross)}</text>
-    <text x="${(indirectX+taxX)/2}" y="138" text-anchor="middle" font-size="12.5" fill="#ea580c" font-weight="700">↓ 扣间接成本后 税前净利润 ${fmt(preTax)}</text>`;
+  // --- 菱形：毛利润 / 税前净利润（位于主水管上）---
+  const diaSVG=`
+    ${diamond(260,mainCY,64,42,'#16a34a','毛利润',fmt(gross))}
+    ${diamond(660,mainCY,80,44,'#ea580c','税前净利润',fmt(preTax))}`;
 
   const legend=`
-    <g transform="translate(${pipeX},672)" font-size="12">
+    <g transform="translate(${pipeX},686)" font-size="12">
       <rect x="0" y="0" width="14" height="14" rx="3" fill="url(#water)"/><text x="20" y="11">营业收入（主水管）</text>
       <rect x="160" y="0" width="14" height="14" rx="3" fill="#dc2626"/><text x="180" y="11">直接成本（左侧树枝）</text>
       <rect x="330" y="0" width="14" height="14" rx="3" fill="#ea580c"/><text x="350" y="11">间接成本（一级分支）</text>
-      <rect x="510" y="0" width="14" height="14" rx="3" fill="#7c3aed"/><text x="530" y="11">税款（右侧）</text>
-      <rect x="630" y="0" width="14" height="14" rx="3" fill="#16a34a"/><text x="650" y="11">净利润</text>
+      <polygon points="500,7 507,0 514,7 507,14" fill="#16a34a"/><text x="524" y="11">毛利润/税前净利润（菱形）</text>
+      <rect x="700" y="0" width="14" height="14" rx="3" fill="#7c3aed"/><text x="720" y="11">税款（下游）</text>
+      <rect x="800" y="0" width="14" height="14" rx="3" fill="#16a34a"/><text x="820" y="11">净利润</text>
     </g>`;
 
   const svg = `
@@ -578,9 +582,8 @@ function renderFlow(){
 
     ${directSVG}
     ${indirectSVG}
-    ${taxSVG}
-    ${netSVG}
-    ${labels}
+    ${downSVG}
+    ${diaSVG}
     ${legend}
   </svg>`;
   document.getElementById('flowChart').innerHTML = svg;
