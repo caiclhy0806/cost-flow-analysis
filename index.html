@@ -488,9 +488,9 @@ function renderFlow(){
   const s = buildSeries(target);
   const gross = s.revenue - s.direct;
   const preTax = gross - s.indirect;
-  const W=1040,H=700;
-  const pipeX=40,pipeY=40,pipeW=860,pipeH=60,mainCY=pipeY+pipeH/2;   // 主水管加粗
-  const directX=200, indirectX=500, taxX=800;                       // 左 / 中 / 右（税款恢复为主水管下方分支）
+  const W=1120,H=710;
+  const pipeX=40,pipeY=40,pipeW=1000,pipeH=60,mainCY=pipeY+pipeH/2;   // 主水管加粗（按需求拉长，给分支留白）
+  const directX=220, indirectX=600, taxX=900;                       // 左 / 中 / 右（税款右移，前置分支留出合理间距）
   const dStartY=300,step=58,leafW=150,leafH=36;
   // 协调高级低饱和配色
   const C={
@@ -555,18 +555,18 @@ function renderFlow(){
     <line x1="${taxX}" y1="${pipeY+pipeH}" x2="${taxX}" y2="${taxNb.y}" stroke="${C.tax}" stroke-width="4" marker-end="url(#arrow)"/>
     ${node(taxNb.x,taxNb.y,taxNb.w,taxNb.h,C.tax,'税款',fmt(s.tax),13)}`;
 
-  // --- 菱形：毛利润 置于直接成本与间接成本中间（顶部横排），税前净利润 置于原毛利润右侧位置 ---
-  const grossX=350, preTaxX=675;
+  // --- 菱形：毛利润 置于直接成本与间接成本中间，税前净利润 置于其右侧，二者同尺寸 ---
+  const grossX=410, preTaxX=775, DIA_RW=64, DIA_RH=42;
   const diaSVG=`
-    <line x1="${grossX}" y1="${pipeY+pipeH}" x2="${grossX}" y2="${160-36}" stroke="${C.line}" stroke-width="2" stroke-dasharray="4 3"/>
-    <line x1="${grossX}" y1="${160+36}" x2="${grossX}" y2="212" stroke="${C.line}" stroke-width="2" stroke-dasharray="4 3"/>
-    <line x1="${preTaxX}" y1="${pipeY+pipeH}" x2="${preTaxX}" y2="${160-42}" stroke="${C.line}" stroke-width="2" stroke-dasharray="4 3"/>
-    <line x1="${preTaxX}" y1="${160+42}" x2="${preTaxX}" y2="216" stroke="${C.line}" stroke-width="2" stroke-dasharray="4 3"/>
-    ${diamond(grossX,160,42,36,C.diaGross,'毛利润',fmt(gross))}
-    ${diamond(preTaxX,160,68,42,C.diaPre,'税前净利润',fmt(preTax))}`;
+    <line x1="${grossX}" y1="${pipeY+pipeH}" x2="${grossX}" y2="${160-DIA_RH}" stroke="${C.line}" stroke-width="2" stroke-dasharray="4 3"/>
+    <line x1="${grossX}" y1="${160+DIA_RH}" x2="${grossX}" y2="216" stroke="${C.line}" stroke-width="2" stroke-dasharray="4 3"/>
+    <line x1="${preTaxX}" y1="${pipeY+pipeH}" x2="${preTaxX}" y2="${160-DIA_RH}" stroke="${C.line}" stroke-width="2" stroke-dasharray="4 3"/>
+    <line x1="${preTaxX}" y1="${160+DIA_RH}" x2="${preTaxX}" y2="216" stroke="${C.line}" stroke-width="2" stroke-dasharray="4 3"/>
+    ${diamond(grossX,160,DIA_RW,DIA_RH,C.diaGross,'毛利润',fmt(gross))}
+    ${diamond(preTaxX,160,DIA_RW,DIA_RH,C.diaPre,'税前净利润',fmt(preTax))}`;
 
   // --- 净利润（主水管右端向下汇入末端水池）+ 子池（可用库存 / 现金流） ---
-  const netDropX=900;
+  const netDropX=980;
   const netNb={x:610,y:540,w:310,h:62};
   const netSVG=`
     <path d="M${netDropX} ${mainCY} L${netDropX} ${netNb.y+netNb.h/2} L${netNb.x+netNb.w-12} ${netNb.y+netNb.h/2}" fill="none" stroke="${C.net}" stroke-width="6" marker-end="url(#arrow)"/>
@@ -575,7 +575,7 @@ function renderFlow(){
     ${node(775,624,150,46,C.cf,'经营现金流',fmt(s.cf),12)}`;
 
   const legend=`
-    <g transform="translate(${pipeX},668)" font-size="12">
+    <g transform="translate(${pipeX},678)" font-size="12">
       <rect x="0" y="0" width="14" height="14" rx="3" fill="url(#water)"/><text x="20" y="11">营业收入（主水管）</text>
       <rect x="160" y="0" width="14" height="14" rx="3" fill="${C.direct}"/><text x="180" y="11">直接成本（左侧树枝）</text>
       <rect x="330" y="0" width="14" height="14" rx="3" fill="${C.indirect}"/><text x="350" y="11">间接成本（一级分支）</text>
