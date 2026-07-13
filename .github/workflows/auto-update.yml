@@ -1,0 +1,46 @@
+name: 成本数据每日同步
+
+# 参照 exchange-rate 项目的 GitHub Actions 模式：
+# 定时任务跑在 GitHub 云端，不依赖本机开机或本地进程。
+on:
+  schedule:
+    # 每天北京时间 9:30（UTC 1:30）运行
+    - cron: '30 1 * * *'
+  workflow_dispatch:  # 支持手动触发
+
+# 需要写权限才能推送代码
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0   # 获取完整 Git 历史
+        ref: main        # 检出 main 分支（非 detached HEAD）
+
+    - name: 配置 Git
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+
+    - name: 写入同步时间戳（心跳，确保每日自动提交）
+      run: |
+        mkdir -p data
+        echo "last_sync=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" > data/.last-sync
+
+    - name: 提交并推送（如有变更）
+      run: |
+        git add -A
+        if ! git diff --cached --quiet; then
+          git commit -m "自动同步 $(date +'%Y-%m-%d')"
+          git pull --rebase --autostash origin main
+          git push origin main
+          echo "已推送"
+        else
+          echo "无变更，跳过"
+        fi

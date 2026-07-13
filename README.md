@@ -6,57 +6,27 @@
 
 ---
 
-## 一、在线访问
+## 一、在线访问（推荐）
 
-已部署在 GitHub Pages，直接打开即可（无需安装）：
+已部署在 GitHub Pages，直接打开即可（无需安装、无需本地服务器）：
 
 **https://caiclhy0806.github.io/cost-flow-analysis/**
 
 ---
 
-## 二、本地预览
+## 二、本地查看（无需本地服务器）
 
-本地预览依赖本机运行的 `server.py`（监听 `127.0.0.1:8765`）。
+本程序是单文件静态页面，**查看时不需要任何本地服务进程**。两种离线方式任选：
 
-### 方式 A：临时启动（仅当前终端 / 会话有效）
-```bash
-cd "Cost flow"
-python3 server.py 8765
-# 浏览器打开 http://127.0.0.1:8765/index.html
-```
-> 关掉终端 / 重启后进程会退出，需重新执行。
+### 方式 A：直接双击打开
+双击仓库内的 `index.html`，浏览器以 `file://` 方式打开即可正常使用。
+- 数据存在浏览器 `localStorage`，录入 / 计算 / 流程图全部可用。
+- 唯一例外：从仓库载入「已发布数据」那一步在 `file://` 下会被浏览器拦截，但代码已 `catch` 静默处理，不影响本地录入与查看。
 
-### 方式 B：注册为开机自启服务（推荐，一次配置永久常驻）
-本仓库已在本机放置启动项文件 `~/Library/LaunchAgents/com.costflow.preview.plist`
-（`RunAtLoad` + `KeepAlive`，登录自启、崩溃自动重启）。在本机**真实终端**执行一次：
+### 方式 B：用 GitHub Pages 线上站
+见上方「一、在线访问」。
 
-```bash
-launchctl load ~/Library/LaunchAgents/com.costflow.preview.plist
-```
-- 验证：`curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8765/index.html` → `200`
-- 停止：`launchctl unload ~/Library/LaunchAgents/com.costflow.preview.plist`
-
-> 若需自行重建该 plist（例如换机器），内容如下（请将两个路径改成你本机的实际路径）：
-> ```xml
-> <?xml version="1.0" encoding="UTF-8"?>
-> <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-> <plist version="1.0">
-> <dict>
->     <key>Label</key>
->     <string>com.costflow.preview</string>
->     <key>ProgramArguments</key>
->     <array>
->         <string>/path/to/python</string>
->         <string>/path/to/Cost flow/server.py</string>
->         <string>8765</string>
->     </array>
->     <key>RunAtLoad</key>
->     <true/>
->     <key>KeepAlive</key>
->     <true/>
-> </dict>
-> </plist>
-> ```
+> 说明：早期版本曾依赖本机 `server.py` + `launchctl` 常驻来提供预览，现已废除——exchange-rate 项目即采用「纯静态 + GitHub Pages」模式，本程序照此简化，查看不再需要任何本地服务。
 
 ---
 
@@ -68,7 +38,7 @@ launchctl load ~/Library/LaunchAgents/com.costflow.preview.plist
    - **盈利状况表**（逐线毛利润 / 税前净利润 / 净利润）
    - **三重视角**（账面净利 / 可用库存 / 经营现金流）
    - **成本流向流程图**（主水管=营业收入 → 分支扣直接 / 间接 / 税款 → 末端净利润 + 子池）
-4. **发布到仓库**（仅本地 `127.0.0.1` 可用）：点击「☁️ 发布到仓库」会把当前数据写入 `data/costflow.json`；每日自动化任务会提交并推送到 GitHub，使线上站与仓库数据保持一致。
+4. **发布到仓库**：点击「☁️ 发布到仓库」会导出仓库格式的 `costflow.json`。将其提交到仓库的 `data/` 目录后，线上站（GitHub Pages）即自动更新为最新数据。
 
 ### 核算口径
 - 毛利润 = 营业收入 − 直接成本
@@ -84,8 +54,8 @@ launchctl load ~/Library/LaunchAgents/com.costflow.preview.plist
 ```
 Cost flow/
 ├── index.html          # 核心单文件（录入 / 计算 / 表格 / SVG 流程图）
-├── server.py           # 本地静态服务 + /api/publish 发布接口（端口 8765）
-├── data/costflow.json  # 已发布数据（仓库与线上站一致）
+├── data/costflow.json  # 已发布数据（仓库与线上站一致；由「发布到仓库」导出后提交）
+├── .github/workflows/  # GitHub Actions：每日自动同步（替代原本地自动化）
 ├── .nojekyll           # 禁用 GitHub Pages 的 Jekyll 处理
 ├── 开发记录.md          # 完整开发过程与需求演变记录
 └── README.md           # 本文件
@@ -96,8 +66,9 @@ Cost flow/
 ## 五、部署与维护
 
 - **建站**：GitHub Pages，发布 `main` 分支根目录，配 `.nojekyll`。
-- **自动更新**：WorkBuddy 每日自动化（约 09:30）提交并推送 `data/costflow.json`。
-- **凭证安全**：推送使用复用自其他仓库的 Personal Access Token，经 `git -c url...insteadOf` 传入，**不写入本仓库的 `.git/config`**。建议定期轮换该令牌。
+- **自动更新**：`.github/workflows/auto-update.yml`（参照 exchange-rate 项目的 GitHub Actions 模式），每天北京时间 9:30 在 GitHub 云端运行并提交；也可在 Actions 页面手动 `workflow_dispatch` 触发。运行不依赖本机开机或本地进程。
+- **发布数据**：在页面点击「发布到仓库」导出 `costflow.json`，提交到 `data/` 目录即可。GitHub Actions 每日同步会确保仓库时间戳更新。
+- **凭证安全**：仓库推送使用 Personal Access Token，经 `git -c url...insteadOf` 传入，**不写入** 本仓库的 `.git/config`。建议定期轮换该令牌。
 
 ---
 

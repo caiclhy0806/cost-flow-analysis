@@ -183,7 +183,7 @@
     </div>
   </div>
 
-  <footer>本系统为内部管理分析工具。数据可保存在本地浏览器（localStorage），亦可「发布到仓库」经每日自动化同步至 GitHub（线上站与仓库一致）。财务口径以公司正式报表为准。</footer>
+  <footer>本系统为内部管理分析工具。数据可保存在本地浏览器（localStorage），亦可「发布到仓库」导出 costflow.json 经 GitHub Actions 同步至 GitHub Pages（线上站与仓库一致）。财务口径以公司正式报表为准。</footer>
 </div>
 
 <script>
@@ -675,10 +675,11 @@ function publishToRepo(){
   if(!idx.length){ flash('没有可发布的数据，请先保存月份'); return; }
   const data={version:1, months:{}};
   idx.forEach(m=> data.months[m]=JSON.parse(localStorage.getItem(keyOf(m))));
-  fetch('/api/publish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
-    .then(r=>r.json())
-    .then(j=>{ if(j&&j.ok){ flash('✅ 已写入仓库，稍后由每日自动化提交推送'); } else { throw new Error((j&&j.error)||'发布失败'); } })
-    .catch(err=>{ flash('⚠️ 发布失败：'+(err.message||err)+'（请确认本地服务 http://127.0.0.1:8765 已启动）'); });
+  // 无需本地服务器：直接导出仓库格式的 costflow.json，提交到仓库 data/ 即可由 GitHub Pages 同步
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='costflow.json'; a.click();
+  flash('✅ 已导出 costflow.json（仓库格式）。请将其提交到仓库 data/ 目录，线上站即自动更新');
 }
 function loadPublishedData(){
   return fetch('data/costflow.json').then(r=>{ if(!r.ok) throw new Error('no data'); return r.json(); }).then(d=>{
@@ -699,9 +700,7 @@ function init(){
   document.getElementById('monthPicker').value=state.month;
   bindEvents();
   renderAll();
-  // 仅本地预览模式允许发布到仓库
-  const isLocal = ['127.0.0.1','localhost','0.0.0.0'].includes(location.hostname);
-  if(!isLocal){ const b=document.getElementById('btnPublish'); if(b){ b.disabled=true; b.style.opacity=.5; b.title='仅在本地预览(http://127.0.0.1:8765)时可发布到仓库'; } }
+  // 发布功能已改为「导出 costflow.json」，无需本地服务器，任何来源均可使用
   // 从仓库载入已发布数据（覆盖本地，使线上站与仓库一致）
   loadPublishedData().then(()=>{
     const idx=getIndex();
