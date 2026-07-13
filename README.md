@@ -72,4 +72,57 @@ Cost flow/
 
 ---
 
+## 六、版本与回退（ver.001）
+
+本项目在引入「一键云发布」改造前，已将当时这版纯静态程序归档为 **`ver.001`**，便于随时回退：
+
+- **Git 标签**：`ver.001`（annotated tag，已推送到仓库）。回退到该版本全量代码：
+  ```bash
+  git checkout ver.001        # 切到该快照
+  # 或仅恢复工作区文件（不切分支）：
+  git checkout ver.001 -- .
+  ```
+- **物理副本**：`versions/ver.001/`（含 `index.html` / `README.md` / `开发记录.md` / `data/` / `.github/` / `.nojekyll`，与源文件逐字节一致）。直接双击 `versions/ver.001/index.html` 即可查看改造前的程序，无需 git。
+
+> 命名约定：后续若继续迭代，建议沿用 `ver.002`、`ver.003`… 的编号（每次在改造前打一个 git tag + 复制一份 `versions/ver.NNN/` 副本），形成可追溯的版本线。
+
+---
+
+## 七、创建细粒度 PAT（用于一键发布）
+
+「☁️ 发布到仓库」需要你自己的 GitHub 个人访问令牌（PAT）。**推荐使用细粒度令牌（Fine-grained）**，并只授权本仓库、仅 `Contents` 写权限，最小化风险。
+
+### 步骤流程图
+
+```mermaid
+flowchart TD
+  A[打开 GitHub Token 设置页] --> B[Generate new token → Fine-grained]
+  B --> C[填写名称（如 cost-flow-publish）与有效期]
+  C --> D[Repository access → Only select repositories → 勾 cost-flow-analysis]
+  D --> E[Permissions → Repository → Contents → Read and write]
+  E --> F[Generate token]
+  F --> G[复制生成的 github_pat_xxx]
+  G --> H[回到本程序，粘贴到「GitHub 令牌(PAT)」框 → 点「记住」]
+  H --> I[点「☁️ 发布到仓库」一键写入仓库]
+```
+
+### 文字步骤
+
+1. 打开 **https://github.com/settings/tokens?type=beta**（细粒度令牌页；旧版在 `/settings/tokens` 选 "Fine-grained token"）。
+2. 点 **Generate new token** → **Fine-grained token**。
+3. **Token name**：任取，如 `cost-flow-publish`。
+4. **Expiration**：设一个合理的过期时间（如 90 天），到期即失效更安全。
+5. **Repository access**：选 **Only select repositories**，勾选 **`caiclhy0806/cost-flow-analysis`**（不要选 All repositories）。
+6. **Permissions → Repository permissions → Contents**：右侧下拉改为 **Read and write**（这是发布所需的唯一权限；其余保持 No access）。
+7. 滚到最下点 **Generate token**，页面会显示一次性的 `github_pat_xxxxxxxx`，**立即复制保存**（离开后不可再见）。
+8. 回到本程序页面，把令牌粘贴进「GitHub 令牌(PAT)」输入框，点 **「记住」**（仅存本机浏览器 `localStorage`）。
+9. 之后点 **「☁️ 发布到仓库」** 即可一键把数据写入仓库并触发 Pages 重建。
+
+> 安全提示：
+> - 令牌仅存于你本机浏览器，不会进入代码或仓库；换设备/清缓存后需重新粘贴。
+> - 不再需要时，在页面点 **「清除」** 抹掉本地令牌，并到 GitHub 令牌页 **Revoke** 作废。
+> - 切勿把 `github_pat_xxx` 明文发给他人或提交到代码里。
+
+---
+
 *项目由 WorkBuddy 协助搭建与迭代。*
