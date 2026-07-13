@@ -109,6 +109,15 @@
     <span id="saveStatus" style="font-size:12px;color:var(--green);"></span>
   </div>
 
+  <!-- 发布设置：GitHub 令牌（仅存本机浏览器，用于一键云发布，无需服务器/域名） -->
+  <div class="bar" style="background:transparent;border:none;padding:6px 0;flex-wrap:wrap;gap:8px;">
+    <label style="font-size:12px;color:var(--muted);">GitHub 令牌(PAT)</label>
+    <input type="password" id="ghToken" placeholder="ghp_xxx 需 repo 权限，仅存本机浏览器" style="width:300px;font-size:12px;" autocomplete="off" />
+    <button class="btn-ghost" id="btnSaveToken" style="font-size:12px;padding:4px 10px;">记住</button>
+    <button class="btn-ghost" id="btnClearToken" style="font-size:12px;padding:4px 10px;">清除</button>
+    <span style="font-size:12px;color:var(--muted);">用于「☁️ 发布到仓库」一键写入 GitHub（无需服务器/域名）</span>
+  </div>
+
   <div class="monthrow" id="monthList"></div>
 
   <!-- ============ 流程图（置顶） ============ -->
@@ -183,7 +192,7 @@
     </div>
   </div>
 
-  <footer>本系统为内部管理分析工具。数据可保存在本地浏览器（localStorage），亦可「发布到仓库」导出 costflow.json 经 GitHub Actions 同步至 GitHub Pages（线上站与仓库一致）。财务口径以公司正式报表为准。</footer>
+  <footer>本系统为内部管理分析工具。数据保存在本地浏览器（localStorage）；填入 GitHub 令牌(PAT) 后，点「☁️ 发布到仓库」即可一键写入 GitHub 仓库并触发 Pages 重建（无需服务器/域名）。财务口径以公司正式报表为准。</footer>
 </div>
 
 <script>
@@ -632,6 +641,8 @@ function bindEvents(){
   document.getElementById('btnDel').onclick=()=>{ if(confirm('确认删除 '+state.month+' 的数据？')){ deleteMonth(state.month); renderMonthList(); const idx=getIndex(); if(idx.length){switchMonth(idx[idx.length-1]);}else{state=defaultState(curMonth());renderAll();} flash('已删除'); } };
   document.getElementById('btnExport').onclick=exportJSON;
   document.getElementById('btnPublish').onclick=publishToRepo;
+  document.getElementById('btnSaveToken').onclick=()=>{ const v=document.getElementById('ghToken').value.trim(); if(!v){flash('令牌为空');return;} localStorage.setItem('gh_token',v); flash('已记住令牌（仅存本机浏览器）'); };
+  document.getElementById('btnClearToken').onclick=()=>{ localStorage.removeItem('gh_token'); document.getElementById('ghToken').value=''; flash('已清除令牌'); };
   document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
   document.getElementById('fileImport').onchange=importJSON;
   document.getElementById('flowTarget').addEventListener('change', renderFlow);
@@ -670,16 +681,32 @@ function importJSON(e){
   };
   reader.readAsText(file);
 }
-function publishToRepo(){
+function b64(str){
+  const bytes=new TextEncoder().encode(str); let bin='';
+  bytes.forEach(b=> bin+=String.fromCharCode(b)); return btoa(bin);
+}
+async function publishToRepo(){
+  const token=(document.getElementById('ghToken').value||'').trim() || (localStorage.getItem('gh_token')||'');
+  if(!token){ flash('请先在下方填入 GitHub 令牌(PAT) 并点「记住」'); document.getElementById('ghToken').focus(); return; }
   const idx=getIndex();
   if(!idx.length){ flash('没有可发布的数据，请先保存月份'); return; }
   const data={version:1, months:{}};
   idx.forEach(m=> data.months[m]=JSON.parse(localStorage.getItem(keyOf(m))));
-  // 无需本地服务器：直接导出仓库格式的 costflow.json，提交到仓库 data/ 即可由 GitHub Pages 同步
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='costflow.json'; a.click();
-  flash('✅ 已导出 costflow.json（仓库格式）。请将其提交到仓库 data/ 目录，线上站即自动更新');
+  const content=b64(JSON.stringify(data,null,2));
+  const owner='caiclhy0806', repo='cost-flow-analysis', path='data/costflow.json', branch='main';
+  const api=`https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+  const headers={'Authorization':`Bearer ${token}`,'Accept':'application/vnd.github+json','Content-Type':'application/json'};
+  try{
+    let sha;
+    const getRes=await fetch(`${api}?ref=${branch}`,{headers});
+    if(getRes.ok){ const j=await getRes.json(); sha=j.sha; }
+    const body={message:`发布成本数据 ${new Date().toISOString().slice(0,10)}`, content, branch};
+    if(sha) body.sha=sha;
+    flash('正在发布到 GitHub…');
+    const putRes=await fetch(api,{method:'PUT',headers,body:JSON.stringify(body)});
+    if(!putRes.ok){ const e=await putRes.json().catch(()=>({})); throw new Error(e.message||('HTTP '+putRes.status)); }
+    flash('✅ 已发布到 GitHub，线上站稍后自动重建');
+  }catch(err){ flash('⚠️ 发布失败：'+(err.message||err)); }
 }
 function loadPublishedData(){
   return fetch('data/costflow.json').then(r=>{ if(!r.ok) throw new Error('no data'); return r.json(); }).then(d=>{
@@ -698,6 +725,7 @@ function init(){
   let loaded=loadMonth(m);
   state = loaded || defaultState(m);
   document.getElementById('monthPicker').value=state.month;
+  document.getElementById('ghToken').value=localStorage.getItem('gh_token')||'';
   bindEvents();
   renderAll();
   // 发布功能已改为「导出 costflow.json」，无需本地服务器，任何来源均可使用

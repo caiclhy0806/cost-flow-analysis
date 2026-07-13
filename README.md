@@ -38,7 +38,7 @@
    - **盈利状况表**（逐线毛利润 / 税前净利润 / 净利润）
    - **三重视角**（账面净利 / 可用库存 / 经营现金流）
    - **成本流向流程图**（主水管=营业收入 → 分支扣直接 / 间接 / 税款 → 末端净利润 + 子池）
-4. **发布到仓库**：点击「☁️ 发布到仓库」会导出仓库格式的 `costflow.json`。将其提交到仓库的 `data/` 目录后，线上站（GitHub Pages）即自动更新为最新数据。
+4. **发布到仓库（一键云发布）**：在页面下方的「GitHub 令牌(PAT)」输入框填入你的 PAT（需 `repo` 权限）并点「记住」，之后点「☁️ 发布到仓库」即直接用 GitHub API 把数据写入仓库 `data/costflow.json` 并触发 Pages 重建——**无需本地服务器、无需域名**。令牌仅存本机浏览器 `localStorage`。
 
 ### 核算口径
 - 毛利润 = 营业收入 − 直接成本
@@ -54,7 +54,7 @@
 ```
 Cost flow/
 ├── index.html          # 核心单文件（录入 / 计算 / 表格 / SVG 流程图）
-├── data/costflow.json  # 已发布数据（仓库与线上站一致；由「发布到仓库」导出后提交）
+├── data/costflow.json  # 已发布数据（仓库与线上站一致；由「一键发布」经 GitHub API 写入）
 ├── .github/workflows/  # GitHub Actions：每日自动同步（替代原本地自动化）
 ├── .nojekyll           # 禁用 GitHub Pages 的 Jekyll 处理
 ├── 开发记录.md          # 完整开发过程与需求演变记录
@@ -67,7 +67,7 @@ Cost flow/
 
 - **建站**：GitHub Pages，发布 `main` 分支根目录，配 `.nojekyll`。
 - **自动更新**：`.github/workflows/auto-update.yml`（参照 exchange-rate 项目的 GitHub Actions 模式），每天北京时间 9:30 在 GitHub 云端运行并提交；也可在 Actions 页面手动 `workflow_dispatch` 触发。运行不依赖本机开机或本地进程。
-- **发布数据**：在页面点击「发布到仓库」导出 `costflow.json`，提交到 `data/` 目录即可。GitHub Actions 每日同步会确保仓库时间戳更新。
+- **一键发布数据**：在页面填入 GitHub PAT 并点「☁️ 发布到仓库」，即经 GitHub Contents API 将 `data/costflow.json` 提交到仓库（无需本地服务/域名）。令牌仅存本机浏览器。GitHub Actions 每日同步仍会保持仓库时间戳新鲜。
 - **凭证安全**：仓库推送使用 Personal Access Token，经 `git -c url...insteadOf` 传入，**不写入** 本仓库的 `.git/config`。建议定期轮换该令牌。
 
 ---
