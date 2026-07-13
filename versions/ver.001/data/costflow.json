@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "months": {
+    "2026-07": {
+      "month": "2026-07",
+      "lines": {
+        "daiso": {
+          "revenue": 0,
+          "costs": {
+            "procurement": 0,
+            "packaging": 0
+          }
+        },
+        "self_fill": {
+          "revenue": 0,
+          "costs": {
+            "labor": 0,
+            "material": 0,
+            "utilities": 0,
+            "equipment": 0,
+            "packaging": 0
+          }
+        },
+        "cosmosil": {
+          "revenue": 0,
+          "costs": {
+            "procurement": 0,
+            "packaging": 0
+          }
+        },
+        "self_col": {
+          "revenue": 0,
+          "costs": {
+            "labor": 0,
+            "material": 0,
+            "utilities": 0,
+            "equipment": 0,
+            "packaging": 0
+          }
+        },
+        "other": {
+          "revenue": 0,
+          "costs": {
+            "labor": 0,
+            "material": 0,
+            "utilities": 0,
+            "equipment": 0,
+            "packaging": 0
+          }
+        }
+      },
+      "indirect": {
+        "rd": {
+          "labor": 0,
+          "equip": 0,
+          "material": 0,
+          "patent": 0
+        },
+        "sales": {
+          "labor": 0,
+          "travel": 0,
+          "promo": 0
+        },
+        "mgmt": {
+          "admin": 0,
+          "rent": 0,
+          "utility": 0,
+          "legal": 0,
+          "depreciation": 0,
+          "welfare": 0,
+          "service": 0,
+          "finance": 0
+        }
+      },
+      "taxRate": 25,
+      "cash": {
+        "beginAR": 0,
+        "endAR": 0,
+        "beginInv": 0,
+        "endInv": 0,
+        "depreciation": 0
+      }
+    }
+  }
+}

@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>公司月度成本流向与净利润分析系统</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --ink:#1f2a37; --sub:#6b7280;
+    --line:#e5e7eb; --blue:#2563eb; --blue2:#1e40af; --green:#16a34a;
+    --red:#dc2626; --orange:#ea580c; --amber:#d97706; --purple:#7c3aed;
+    --soft:#eef2ff;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+       background:var(--bg);color:var(--ink);line-height:1.5;}
+  header{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;padding:18px 24px;
+         display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;}
+  header h1{font-size:19px;margin:0;font-weight:700;}
+  header .meta{font-size:13px;opacity:.92;}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px;}
+  .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--card);
+       border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:18px;
+       position:sticky;top:0;z-index:20;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+  .bar label{font-size:13px;color:var(--sub);}
+  select,input[type=month],button{font-family:inherit;font-size:14px;}
+  select,input[type=month]{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);}
+  button{cursor:pointer;border:none;border-radius:8px;padding:8px 14px;font-weight:600;}
+  .btn-primary{background:var(--blue);color:#fff;}
+  .btn-primary:hover{background:var(--blue2);}
+  .btn-ghost{background:#fff;border:1px solid var(--line);color:var(--ink);}
+  .btn-ghost:hover{background:var(--soft);}
+  .btn-danger{background:#fff;border:1px solid #fecaca;color:var(--red);}
+  .spacer{flex:1;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 16px 18px;
+        box-shadow:0 1px 3px rgba(0,0,0,.03);}
+  .card h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+  .tag{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;}
+  .tag.agent{background:#fef3c7;color:var(--amber);}
+  .tag.self{background:#dbeafe;color:var(--blue);}
+  .field{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:7px 0;}
+  .field label{font-size:13px;color:var(--sub);flex:1;}
+  .field input[type=number]{width:130px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;text-align:right;}
+  .field input:focus{outline:2px solid var(--blue);border-color:var(--blue);}
+  .group-title{font-size:12px;font-weight:700;color:var(--sub);text-transform:none;
+               margin:14px 0 4px;padding-bottom:4px;border-bottom:1px dashed var(--line);}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:6px;}
+  .pill.direct{background:#fee2e2;color:var(--red);}
+  .pill.indirect{background:#fef3c7;color:var(--amber);}
+  .section-head{font-size:16px;font-weight:800;margin:28px 0 12px;color:var(--ink);
+                display:flex;align-items:center;gap:8px;}
+  .section-head .n{background:var(--blue);color:#fff;width:24px;height:24px;border-radius:7px;
+                   display:inline-flex;align-items:center;justify-content:center;font-size:13px;}
+  /* results */
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);}
+  th:first-child,td:first-child{text-align:left;}
+  thead th{background:var(--soft);color:var(--blue2);font-weight:700;position:sticky;top:64px;}
+  tbody tr:hover{background:#fafbff;}
+  tfoot td{font-weight:800;background:#f0fdf4;border-top:2px solid var(--green);}
+  .pos{color:var(--green);font-weight:700;}
+  .neg{color:var(--red);font-weight:700;}
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:6px;}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+  .stat .k{font-size:12px;color:var(--sub);}
+  .stat .v{font-size:20px;font-weight:800;margin-top:4px;}
+  .stat.blue{border-color:#bfdbfe;} .stat.blue .v{color:var(--blue);}
+  .stat.green{border-color:#bbf7d0;} .stat.green .v{color:var(--green);}
+  .stat.amber{border-color:#fde68a;} .stat.amber .v{color:var(--amber);}
+  .stat.purple{border-color:#ddd6fe;} .stat.purple .v{color:var(--purple);}
+  .note{font-size:12px;color:var(--sub);background:#fff7ed;border:1px solid #fed7aa;
+        border-radius:10px;padding:10px 12px;margin-top:12px;}
+  .flowbox{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px;}
+  .flowbox svg{min-width:920px;width:100%;height:auto;display:block;}
+  .hidden{display:none;}
+  .monthchip{font-size:12px;padding:4px 9px;border:1px solid var(--line);border-radius:999px;
+             background:#fff;cursor:pointer;}
+  .monthchip:hover{background:var(--soft);}
+  .monthchip.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .monthrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;}
+  footer{text-align:center;color:var(--sub);font-size:12px;padding:24px;}
+  .toggle-line{font-size:13px;color:var(--sub);margin:6px 0 10px;}
+  .toggle-line select{padding:5px 8px;}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>💧 公司月度成本流向与净利润分析系统</h1>
+    <div class="meta">营业收入主水管 → 分支扣除直接成本 / 间接成本 / 税款 → 末端净利润</div>
+  </div>
+  <div class="meta" id="headerMeta"></div>
+</header>
+
+<div class="wrap">
+  <!-- 顶部工具栏 -->
+  <div class="bar">
+    <label>月份</label>
+    <input type="month" id="monthPicker" />
+    <button class="btn-primary" id="btnSave">💾 保存本月</button>
+    <button class="btn-primary" id="btnPublish">☁️ 发布到仓库</button>
+    <button class="btn-ghost" id="btnNew">🆕 新建空白月</button>
+    <button class="btn-ghost" id="btnExport">⬇️ 导出JSON</button>
+    <button class="btn-ghost" id="btnImport">⬆️ 导入JSON</button>
+    <input type="file" id="fileImport" accept="application/json" class="hidden" />
+    <button class="btn-danger" id="btnDel">🗑️ 删除本月</button>
+    <div class="spacer"></div>
+    <span id="saveStatus" style="font-size:12px;color:var(--green);"></span>
+  </div>
+
+  <div class="monthrow" id="monthList"></div>
+
+  <!-- ============ 流程图（置顶） ============ -->
+  <div class="section-head"><span class="n">1</span> 成本流向流程图（主水管可视化）</div>
+  <div class="card">
+    <div class="toggle-line">
+      查看对象：
+      <select id="flowTarget">
+        <option value="total">公司合计</option>
+      </select>
+    </div>
+    <div class="flowbox"><div id="flowChart"></div></div>
+    <div class="note">
+      说明：顶部<b>加粗主水管=营业收入</b>（标题第一行显示查看对象与月份，第二行显示「营业收入 + 金额」）；左侧分支流出<b>直接成本</b>并按明细像树枝在下一级展开，中间分支流出<b>间接成本</b>并罗列研发/销售/管理一级分支，右侧<b>税款</b>为主水管下方的分支；<b>毛利润</b>菱形置于直接成本与间接成本中间，<b>税前净利润</b>菱形置于其右侧原毛利润位置（均以细线连接主水管，不压在水管上）；主水管右端向下汇入末端<b>净利润</b>水池，其下两个子池分别展示期末<b>可用库存</b>与<b>经营现金流</b>。
+    </div>
+  </div>
+
+  <!-- ============ 盈利状况 ============ -->
+  <div class="section-head"><span class="n">2</span> 每月盈利状况（逐产品线）</div>
+  <div class="card">
+    <table id="resultTable">
+      <thead>
+        <tr>
+          <th>产品类别</th><th>营业收入</th><th>直接成本</th><th>毛利润</th>
+          <th>分摊间接成本</th><th>税前净利润</th><th>税款</th><th>净利润</th>
+        </tr>
+      </thead>
+      <tbody id="resultBody"></tbody>
+      <tfoot id="resultFoot"></tfoot>
+    </table>
+  </div>
+
+  <div class="summary" id="summaryCards" style="margin-top:14px;"></div>
+
+  <!-- 净利润：可用库存 vs 现金流 -->
+  <div class="section-head"><span class="n">3</span> 净利润的三重视角：账面 · 可用库存 · 现金流</div>
+  <div class="summary" id="profitViews"></div>
+
+  <!-- ============ 数据录入 ============ -->
+  <div class="section-head"><span class="n">4</span> 数据录入端口</div>
+  <div class="grid" id="productCards"></div>
+
+  <!-- 间接成本 -->
+  <div class="section-head"><span class="n">5</span> 间接成本（公司级，按直接成本占比分摊到各产品线）</div>
+  <div class="grid">
+    <div class="card">
+      <h2>🔬 研发成本 <span class="pill indirect">间接</span></h2>
+      <div id="rdFields"></div>
+    </div>
+    <div class="card">
+      <h2>📣 销售费用 <span class="pill indirect">间接</span></h2>
+      <div id="salesFields"></div>
+    </div>
+    <div class="card">
+      <h2>🏢 管理成本 <span class="pill indirect">间接</span></h2>
+      <div id="mgmtFields"></div>
+    </div>
+  </div>
+
+  <!-- 税款 & 现金流 -->
+  <div class="section-head"><span class="n">6</span> 税款与现金流调整</div>
+  <div class="grid">
+    <div class="card">
+      <h2>🧾 税款</h2>
+      <div class="field"><label>企业所得税率（%）</label><input type="number" id="taxRate" step="0.1" value="25" /></div>
+      <div class="note">净利润 = 税前净利润 × (1 − 税率)。亏损月份不计提所得税（保守处理）。</div>
+    </div>
+    <div class="card">
+      <h2>🌊 现金流与可用库存</h2>
+      <div id="cashFields"></div>
+      <div class="note">经营现金流 ≈ 净利润 + 折旧(非现金) − 应收账款增加 − 可用库存增加。可用库存为期末在手可售货值（资产口径，与净利润分开列示）。</div>
+    </div>
+  </div>
+
+  <footer>本系统为内部管理分析工具。数据可保存在本地浏览器（localStorage），亦可「发布到仓库」导出 costflow.json 经 GitHub Actions 同步至 GitHub Pages（线上站与仓库一致）。财务口径以公司正式报表为准。</footer>
+</div>
+
+<script>
+/* ====================== 配置 ====================== */
+const PRODUCT_LINES = [
+  { id:'daiso',     name:'DAISO 填料',   type:'agent', note:'代理产品' },
+  { id:'self_fill', name:'自营填料',     type:'self',  note:'自营产品' },
+  { id:'cosmosil',  name:'COSMOSIL 柱', type:'agent', note:'代理产品' },
+  { id:'self_col',  name:'自营色谱柱',   type:'self',  note:'自营产品' },
+  { id:'other',     name:'其他产品',     type:'self',  note:'自营产品' },
+];
+
+// 直接成本字段（按类型区分）
+const DIRECT_FIELDS = {
+  agent: [
+    {key:'procurement', label:'直接采购成本', hint:'代理进价'},
+    {key:'packaging',   label:'包装运输成本', hint:'出运/包材'},
+  ],
+  self: [
+    {key:'labor',      label:'生产人力成本',   hint:'产线工资'},
+    {key:'material',   label:'材料成本',       hint:'原料'},
+    {key:'utilities',  label:'生产水电煤租赁', hint:'厂房能耗'},
+    {key:'equipment',  label:'设备采购租赁',   hint:'设备'},
+    {key:'packaging',  label:'包装运输成本',   hint:'出运/包材'},
+  ],
+};
+
+const RD_FIELDS    = [
+  {key:'labor',    label:'研发人力成本'},
+  {key:'equip',    label:'研发设备投入'},
+  {key:'material', label:'研发材料成本'},
+  {key:'patent',   label:'专利申请费'},
+];
+const SALES_FIELDS = [
+  {key:'labor',    label:'销售人工成本'},
+  {key:'travel',   label:'销售差旅招待'},
+  {key:'promo',    label:'市场推广费用（展/赞/广）'},
+];
+const MGMT_FIELDS  = [
+  {key:'admin',     label:'行政及其他人工'},
+  {key:'rent',      label:'办公室租赁'},
+  {key:'utility',   label:'水电煤气'},
+  {key:'legal',     label:'法律咨询'},
+  {key:'depreciation', label:'折旧分摊'},
+  {key:'welfare',   label:'工会福利'},
+  {key:'service',   label:'服务费'},
+  {key:'finance',   label:'财务费用'},
+];
+const CASH_FIELDS  = [
+  {key:'beginAR',  label:'期初应收账款'},
+  {key:'endAR',    label:'期末应收账款'},
+  {key:'beginInv', label:'期初可用库存'},
+  {key:'endInv',   label:'期末可用库存'},
+  {key:'depreciation', label:'折旧（非现金，现金流加回）'},
+];
+
+/* ====================== 状态 ====================== */
+let state = null;
+
+function defaultState(month){
+  const lines = {};
+  PRODUCT_LINES.forEach(p=>{
+    const costs = {};
+    DIRECT_FIELDS[p.type].forEach(f=> costs[f.key]=0);
+    lines[p.id] = { revenue:0, costs };
+  });
+  const blank = (arr)=>{const o={};arr.forEach(f=>o[f.key]=0);return o;};
+  return {
+    month,
+    lines,
+    indirect:{ rd:blank(RD_FIELDS), sales:blank(SALES_FIELDS), mgmt:blank(MGMT_FIELDS) },
+    taxRate:25,
+    cash:blank(CASH_FIELDS),
+  };
+}
+
+/* ====================== 存储 ====================== */
+const KEY_INDEX = 'costflow_index';
+function getIndex(){ try{return JSON.parse(localStorage.getItem(KEY_INDEX))||[];}catch(e){return [];} }
+function setIndex(a){ localStorage.setItem(KEY_INDEX, JSON.stringify(a)); }
+function keyOf(m){ return 'costflow_'+m; }
+function saveMonth(s){
+  localStorage.setItem(keyOf(s.month), JSON.stringify(s));
+  let idx=getIndex(); if(!idx.includes(s.month)){idx.push(s.month); idx.sort(); setIndex(idx);}
+}
+function loadMonth(m){ try{return JSON.parse(localStorage.getItem(keyOf(m)));}catch(e){return null;} }
+function deleteMonth(m){
+  localStorage.removeItem(keyOf(m));
+  let idx=getIndex().filter(x=>x!==m); setIndex(idx);
+}
+
+/* ====================== 工具 ====================== */
+const num = v => (typeof v==='number' && !isNaN(v)) ? v : 0;
+function fmt(n){ return '¥'+ Math.round(num(n)).toLocaleString('zh-CN'); }
+function fmt0(n){ return Math.round(num(n)).toLocaleString('zh-CN'); }
+function pct(n,d){ return d? (n/d*100).toFixed(1)+'%' : '—'; }
+
+/* ====================== 计算引擎 ====================== */
+function compute(s){
+  // 各产品线
+  const lines = PRODUCT_LINES.map(p=>{
+    const ld = s.lines[p.id];
+    const revenue = num(ld.revenue);
+    let direct = 0; DIRECT_FIELDS[p.type].forEach(f=> direct += num(ld.costs[f.key]));
+    const gross = revenue - direct;
+    return { id:p.id, name:p.name, type:p.type, revenue, direct, gross,
+             allocIndirect:0, preTax:0, tax:0, net:0 };
+  });
+  const totalRevenue = lines.reduce((a,b)=>a+b.revenue,0);
+  const totalDirect  = lines.reduce((a,b)=>a+b.direct,0);
+
+  // 间接成本合计
+  const sumObj = o => Object.values(o).reduce((a,b)=>a+num(b),0);
+  const indirectTotal = sumObj(s.indirect.rd)+sumObj(s.indirect.sales)+sumObj(s.indirect.mgmt);
+
+  // 按直接成本占比分摊（总直接成本为0则等摊）
+  lines.forEach(l=>{
+    const share = totalDirect>0 ? l.direct/totalDirect : 1/lines.length;
+    l.allocIndirect = indirectTotal*share;
+    l.preTax = l.gross - l.allocIndirect;
+  });
+
+  const taxRate = num(s.taxRate)/100;
+  lines.forEach(l=>{
+    l.tax = l.preTax>0 ? l.preTax*taxRate : 0;
+    l.net = l.preTax - l.tax;
+  });
+
+  const totals = {
+    revenue: totalRevenue,
+    direct: lines.reduce((a,b)=>a+b.direct,0),
+    gross: lines.reduce((a,b)=>a+b.gross,0),
+    indirect: indirectTotal,
+    allocIndirect: indirectTotal,
+    preTax: lines.reduce((a,b)=>a+b.preTax,0),
+    tax: lines.reduce((a,b)=>a+b.tax,0),
+    net: lines.reduce((a,b)=>a+b.net,0),
+  };
+
+  // 现金流
+  const c = s.cash;
+  const dAR = num(c.endAR)-num(c.beginAR);
+  const dInv = num(c.endInv)-num(c.beginInv);
+  const depreciation = num(c.depreciation);
+  const operatingCF = totals.net + depreciation - dAR - dInv;
+  const availableInventory = num(c.endInv);
+
+  return { lines, totals, indirect:{rd:sumObj(s.indirect.rd),sales:sumObj(s.indirect.sales),mgmt:sumObj(s.indirect.mgmt),total:indirectTotal},
+           cash:{dAR,dInv,depreciation,operatingCF,availableInventory} };
+}
+
+/* ====================== 渲染：录入表单 ====================== */
+function renderProductCards(){
+  const box = document.getElementById('productCards'); box.innerHTML='';
+  PRODUCT_LINES.forEach(p=>{
+    const ld = state.lines[p.id];
+    const card = document.createElement('div'); card.className='card';
+    const fieldsHtml = DIRECT_FIELDS[p.type].map(f=>`
+      <div class="field">
+        <label>${f.label} <span style="color:#9ca3af;font-size:11px">· ${f.hint}</span></label>
+        <input type="number" min="0" step="0.01" data-line="${p.id}" data-cost="${f.key}" value="${num(ld.costs[f.key])}" />
+      </div>`).join('');
+    card.innerHTML = `
+      <h2>${p.name}
+        <span class="tag ${p.type}">${p.type==='agent'?'代理':'自营'}</span>
+        <span class="pill direct">直接</span>
+      </h2>
+      <div class="field"><label><b>营业收入</b></label>
+        <input type="number" min="0" step="0.01" data-rev="${p.id}" value="${num(ld.revenue)}" style="font-weight:700;border-color:var(--blue)"/>
+      </div>
+      <div class="group-title">直接成本</div>
+      ${fieldsHtml}`;
+    box.appendChild(card);
+  });
+}
+function renderIndirect(){
+  const map = {'rdFields':['rd',RD_FIELDS],'salesFields':['sales',SALES_FIELDS],'mgmtFields':['mgmt',MGMT_FIELDS]};
+  Object.entries(map).forEach(([elId,[grp,fields]])=>{
+    const box=document.getElementById(elId); box.innerHTML='';
+    fields.forEach(f=>{
+      const v = num(state.indirect[grp][f.key]);
+      box.insertAdjacentHTML('beforeend',`
+        <div class="field"><label>${f.label}</label>
+          <input type="number" min="0" step="0.01" data-ind="${grp}" data-k="${f.key}" value="${v}"/></div>`);
+    });
+    box.insertAdjacentHTML('beforeend',`<div class="group-title" style="border:none;color:var(--blue2)">
+      小计：<b id="sub_${grp}"></b></div>`);
+  });
+}
+function renderCash(){
+  const box=document.getElementById('cashFields'); box.innerHTML='';
+  CASH_FIELDS.forEach(f=>{
+    box.insertAdjacentHTML('beforeend',`
+      <div class="field"><label>${f.label}</label>
+        <input type="number" min="0" step="0.01" data-cash="${f.key}" value="${num(state.cash[f.key])}"/></div>`);
+  });
+  document.getElementById('taxRate').value = num(state.taxRate);
+}
+function refreshSubtotals(){
+  const sumObj=o=>Object.values(o).reduce((a,b)=>a+num(b),0);
+  ['rd','sales','mgmt'].forEach(g=>{const e=document.getElementById('sub_'+g);if(e)e.textContent=fmt(sumObj(state.indirect[g]));});
+}
+
+/* ====================== 渲染：结果 ====================== */
+function renderResults(){
+  const r = compute(state);
+  const tb=document.getElementById('resultBody'); tb.innerHTML='';
+  r.lines.forEach(l=>{
+    const sign = x => x>=0 ? `<span class="pos">${fmt(x)}</span>` : `<span class="neg">${fmt(x)}</span>`;
+    tb.insertAdjacentHTML('beforeend',`
+      <tr>
+        <td>${l.name} <span class="tag ${l.type}" style="font-size:10px">${l.type==='agent'?'代理':'自营'}</span></td>
+        <td>${fmt(l.revenue)}</td>
+        <td>${fmt(l.direct)}</td>
+        <td>${sign(l.gross)}</td>
+        <td>${fmt(l.allocIndirect)}</td>
+        <td>${sign(l.preTax)}</td>
+        <td>${fmt(l.tax)}</td>
+        <td>${sign(l.net)}</td>
+      </tr>`);
+  });
+  const t=r.totals;
+  document.getElementById('resultFoot').innerHTML=`
+    <tr><td>合计</td><td>${fmt(t.revenue)}</td><td>${fmt(t.direct)}</td>
+        <td>${fmt(t.gross)}</td><td>${fmt(t.allocIndirect)}</td>
+        <td>${fmt(t.preTax)}</td><td>${fmt(t.tax)}</td><td>${fmt(t.net)}</td></tr>`;
+
+  // 汇总卡片
+  const sc=document.getElementById('summaryCards');
+  sc.innerHTML=`
+    <div class="stat blue"><div class="k">营业收入合计</div><div class="v">${fmt(t.revenue)}</div></div>
+    <div class="stat"><div class="k">直接成本合计</div><div class="v" style="color:var(--red)">${fmt(t.direct)}</div></div>
+    <div class="stat green"><div class="k">毛利润合计</div><div class="v">${fmt(t.gross)}</div></div>
+    <div class="stat amber"><div class="k">间接成本合计</div><div class="v">${fmt(t.indirect)}</div></div>
+    <div class="stat"><div class="k">税前净利润合计</div><div class="v">${fmt(t.preTax)}</div></div>
+    <div class="stat purple"><div class="k">净利润合计</div><div class="v">${fmt(t.net)}</div></div>`;
+
+  // 三重视角
+  const c=r.cash;
+  document.getElementById('profitViews').innerHTML=`
+    <div class="stat purple"><div class="k">📒 账面净利润（权责发生制）</div><div class="v">${fmt(t.net)}</div>
+        <div class="k" style="margin-top:4px">含未收回应收与在库货值</div></div>
+    <div class="stat blue"><div class="k">📦 可用库存（期末在手货值）</div><div class="v">${fmt(c.availableInventory)}</div>
+        <div class="k" style="margin-top:4px">资产口径，不与利润混同</div></div>
+    <div class="stat green"><div class="k">💵 经营现金流（收付实现）</div><div class="v">${fmt(c.operatingCF)}</div>
+        <div class="k" style="margin-top:4px">净利用+折旧−应收增−库存增</div></div>`;
+
+  // 流程图目标下拉
+  const sel=document.getElementById('flowTarget');
+  if(sel.options.length===1){
+    PRODUCT_LINES.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;sel.appendChild(o);});
+  }
+  renderFlow();
+  return r;
+}
+
+/* ====================== 渲染：流程图（主水管） ====================== */
+function monthLabel(){
+  const m=(state.month||'').split('-');
+  return m.length===2 ? `${m[0]}年${parseInt(m[1],10)}月` : (state.month||'');
+}
+function directPartsFor(target){
+  if(target==='total'){
+    const map={};
+    PRODUCT_LINES.forEach(p=>{
+      const ld=state.lines[p.id];
+      DIRECT_FIELDS[p.type].forEach(f=>{
+        if(!map[f.key]) map[f.key]={label:f.label,value:0};
+        map[f.key].value+=num(ld.costs[f.key]);
+      });
+    });
+    return Object.values(map);
+  }
+  const p=PRODUCT_LINES.find(x=>x.id===target);
+  return DIRECT_FIELDS[p.type].map(f=>({label:f.label,value:num(state.lines[target].costs[f.key])}));
+}
+function indirectPartsFor(){
+  const sumObj=o=>Object.values(o).reduce((a,b)=>a+num(b),0);
+  return [
+    {label:'研发成本',value:sumObj(state.indirect.rd)},
+    {label:'销售费用',value:sumObj(state.indirect.sales)},
+    {label:'管理成本',value:sumObj(state.indirect.mgmt)},
+  ];
+}
+function buildSeries(target){
+  const r=compute(state);
+  const dParts=directPartsFor(target);
+  const iParts=indirectPartsFor();
+  if(target==='total'){
+    const t=r.totals;
+    return {total:true,name:'公司合计',title:`公司合计 ${monthLabel()}`,
+            revenue:t.revenue,direct:t.direct,indirect:t.indirect,tax:t.tax,net:t.net,
+            inv:r.cash.availableInventory,cf:r.cash.operatingCF,directParts:dParts,indirectParts:iParts};
+  }
+  const l=r.lines.find(x=>x.id===target);
+  return {total:false,name:l.name,title:`${l.name} ${monthLabel()}`,
+          revenue:l.revenue,direct:l.direct,indirect:l.allocIndirect,tax:l.tax,net:l.net,
+          inv:r.cash.availableInventory,cf:r.cash.operatingCF,directParts:dParts,indirectParts:iParts};
+}
+function renderFlow(){
+  const target = document.getElementById('flowTarget').value;
+  const s = buildSeries(target);
+  const gross = s.revenue - s.direct;
+  const preTax = gross - s.indirect;
+  const W=1120,H=710;
+  const pipeX=40,pipeY=40,pipeW=1000,pipeH=60,mainCY=pipeY+pipeH/2;   // 主水管加粗（按需求拉长，给分支留白）
+  const directX=220, indirectX=600, taxX=930;                       // 左 / 中 / 右（税款右移，使三元素间留白=毛→间=21px）
+  const dStartY=300,step=58,leafW=150,leafH=36;
+  // 协调高级低饱和配色
+  const C={
+    waterA:'#3f6f86', waterB:'#2c5468',          // 主水管：青灰
+    direct:'#b06b5e', directLeaf:'#c0887d',       // 直接成本：陶土红
+    indirect:'#c2a05a', indirectLeaf:'#d4b878',   // 间接成本：暖金
+    tax:'#8a7aa3',                                // 税款：灰紫
+    diaGross:'#5e8c74', diaPre:'#4a7c66',         // 菱形：鼠尾草绿
+    net:'#3f7a5c',                                // 净利润：深苔绿
+    inv:'#4f7d96', cf:'#3f8a8a',                  // 可用库存/现金流：雾蓝/青
+    line:'#9a8f86', arrow:'#7a8a93'
+  };
+
+  const node=(x,y,w,h,fill,title,sub,fs)=>`
+    <g>
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="11" fill="${fill}" stroke="rgba(0,0,0,.10)"/>
+      <text x="${x+w/2}" y="${y+h/2-5}" text-anchor="middle" font-size="${fs}" font-weight="700" fill="#fff">${title}</text>
+      <text x="${x+w/2}" y="${y+h/2+14}" text-anchor="middle" font-size="12" fill="#fff" opacity=".92">${sub}</text>
+    </g>`;
+  const leaf=(x,y,w,h,fill,title,sub)=>`
+    <g>
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${fill}" stroke="rgba(0,0,0,.08)"/>
+      <text x="${x+w/2}" y="${y+h/2-2}" text-anchor="middle" font-size="11.5" font-weight="600" fill="#fff">${title}</text>
+      <text x="${x+w/2}" y="${y+h/2+12}" text-anchor="middle" font-size="10.5" fill="#fff" opacity=".9">${sub}</text>
+    </g>`;
+  const diamond=(cx,cy,rw,rh,fill,title,sub)=>`
+    <g>
+      <polygon points="${cx},${cy-rh} ${cx+rw},${cy} ${cx},${cy+rh} ${cx-rw},${cy}" fill="${fill}" stroke="rgba(0,0,0,.14)"/>
+      <text x="${cx}" y="${cy-1}" text-anchor="middle" font-size="12.5" font-weight="700" fill="#fff">${title}</text>
+      <text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="11" fill="#fff" opacity=".92">${sub}</text>
+    </g>`;
+
+  // --- 直接成本（左侧）：主水管分支 + 树枝状明细（向左展开） ---
+  const dNb={x:directX-105,y:156,w:210,h:50};
+  const dLastY=dStartY+(s.directParts.length-1)*step;
+  let directSVG=`
+    <line x1="${directX}" y1="${pipeY+pipeH}" x2="${directX}" y2="${dNb.y}" stroke="${C.direct}" stroke-width="5" marker-end="url(#arrow)"/>
+    ${node(dNb.x,dNb.y,dNb.w,dNb.h,C.direct,'直接成本',fmt(s.direct),14)}
+    <line x1="${directX}" y1="${dNb.y+dNb.h}" x2="${directX}" y2="${dLastY}" stroke="${C.direct}" stroke-width="4"/>`;
+  s.directParts.forEach((p,i)=>{
+    const ly=dStartY+i*step, lx=directX-18-leafW;
+    directSVG+=`<line x1="${directX}" y1="${ly}" x2="${lx+leafW}" y2="${ly}" stroke="${C.direct}" stroke-width="3"/>`;
+    directSVG+=leaf(lx,ly-18,leafW,leafH,C.directLeaf,p.label,fmt(p.value));
+  });
+
+  // --- 间接成本（中间）：主水管分支 + 一级分支（研发/销售/管理，向左展开）---
+  const iNb={x:indirectX-105,y:156,w:210,h:50};
+  const iLastY=dStartY+(s.indirectParts.length-1)*step;
+  let indirectSVG=`
+    <line x1="${indirectX}" y1="${pipeY+pipeH}" x2="${indirectX}" y2="${iNb.y}" stroke="${C.indirect}" stroke-width="5" marker-end="url(#arrow)"/>
+    ${node(iNb.x,iNb.y,iNb.w,iNb.h,C.indirect,'间接成本',fmt(s.indirect),14)}
+    <line x1="${indirectX}" y1="${iNb.y+iNb.h}" x2="${indirectX}" y2="${iLastY}" stroke="${C.indirect}" stroke-width="4"/>`;
+  s.indirectParts.forEach((p,i)=>{
+    const ly=dStartY+i*step, lx=indirectX-18-leafW;
+    indirectSVG+=`<line x1="${indirectX}" y1="${ly}" x2="${lx+leafW}" y2="${ly}" stroke="${C.indirect}" stroke-width="3"/>`;
+    indirectSVG+=leaf(lx,ly-18,leafW,leafH,C.indirectLeaf,p.label,fmt(p.value));
+  });
+
+  // --- 税款（右侧，恢复为主水管下方的短分支，小框） ---
+  const taxNb={x:taxX-55,y:150,w:110,h:42};
+  const taxSVG=`
+    <line x1="${taxX}" y1="${pipeY+pipeH}" x2="${taxX}" y2="${taxNb.y}" stroke="${C.tax}" stroke-width="4" marker-end="url(#arrow)"/>
+    ${node(taxNb.x,taxNb.y,taxNb.w,taxNb.h,C.tax,'税款',fmt(s.tax),13)}`;
+
+  // --- 菱形：毛利润 置于直接成本与间接成本中间，税前净利润 置于其右侧，二者同尺寸 ---
+  const grossX=410, preTaxX=790, DIA_RW=64, DIA_RH=42;
+  const diaSVG=`
+    <line x1="${grossX}" y1="${pipeY+pipeH}" x2="${grossX}" y2="${160-DIA_RH}" stroke="${C.line}" stroke-width="2" stroke-dasharray="4 3"/>
+    <line x1="${grossX}" y1="${160+DIA_RH}" x2="${grossX}" y2="216" stroke="${C.line}" stroke-width="2" stroke-dasharray="4 3"/>
+    <line x1="${preTaxX}" y1="${pipeY+pipeH}" x2="${preTaxX}" y2="${160-DIA_RH}" stroke="${C.line}" stroke-width="2" stroke-dasharray="4 3"/>
+    <line x1="${preTaxX}" y1="${160+DIA_RH}" x2="${preTaxX}" y2="216" stroke="${C.line}" stroke-width="2" stroke-dasharray="4 3"/>
+    ${diamond(grossX,160,DIA_RW,DIA_RH,C.diaGross,'毛利润',fmt(gross))}
+    ${diamond(preTaxX,160,DIA_RW,DIA_RH,C.diaPre,'税前净利润',fmt(preTax))}`;
+
+  // --- 净利润（主水管最末端向下汇入末端水池）+ 子池（可用库存 / 现金流） ---
+  const netDropX=pipeX+pipeW;   // 平移到主水管最右端，不再落于水管内部
+  const netNb={x:610,y:540,w:310,h:62};
+  const netSVG=`
+    <path d="M${netDropX} ${mainCY} L${netDropX} ${netNb.y+netNb.h/2} L${netNb.x+netNb.w-12} ${netNb.y+netNb.h/2}" fill="none" stroke="${C.net}" stroke-width="6" marker-end="url(#arrow)"/>
+    ${node(netNb.x,netNb.y,netNb.w,netNb.h,C.net,'净利润（末端）',fmt(s.net),14)}
+    ${node(610,624,150,46,C.inv,'可用库存',fmt(s.inv),12)}
+    ${node(775,624,150,46,C.cf,'经营现金流',fmt(s.cf),12)}`;
+
+  const legend=`
+    <g transform="translate(${pipeX},678)" font-size="12">
+      <rect x="0" y="0" width="14" height="14" rx="3" fill="url(#water)"/><text x="20" y="11">营业收入（主水管）</text>
+      <rect x="160" y="0" width="14" height="14" rx="3" fill="${C.direct}"/><text x="180" y="11">直接成本（左侧树枝）</text>
+      <rect x="330" y="0" width="14" height="14" rx="3" fill="${C.indirect}"/><text x="350" y="11">间接成本（一级分支）</text>
+      <polygon points="500,7 507,0 514,7 507,14" fill="${C.diaGross}"/><text x="524" y="11">毛利润/税前净利润（菱形）</text>
+      <rect x="720" y="0" width="14" height="14" rx="3" fill="${C.tax}"/><text x="740" y="11">税款（主水管下方）</text>
+      <rect x="850" y="0" width="14" height="14" rx="3" fill="${C.net}"/><text x="870" y="11">净利润</text>
+    </g>`;
+
+  const svg = `
+  <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="water" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="${C.waterA}"/><stop offset="1" stop-color="${C.waterB}"/>
+      </linearGradient>
+      <marker id="arrow" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 Z" fill="${C.arrow}"/>
+      </marker>
+    </defs>
+
+    <!-- 主水管：营业收入（标题第一行=对象与月份，第二行=「营业收入 + 金额」） -->
+    <rect x="${pipeX}" y="${pipeY}" width="${pipeW}" height="${pipeH}" rx="20" fill="url(#water)"/>
+    <text x="${pipeX+pipeW/2}" y="${mainCY-7}" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">💧 ${s.title}</text>
+    <text x="${pipeX+pipeW/2}" y="${mainCY+16}" text-anchor="middle" font-size="16" font-weight="800" fill="#fff">营业收入 ${fmt(s.revenue)}</text>
+
+    ${directSVG}
+    ${indirectSVG}
+    ${taxSVG}
+    ${diaSVG}
+    ${netSVG}
+    ${legend}
+  </svg>`;
+  document.getElementById('flowChart').innerHTML = svg;
+}
+
+/* ====================== 事件绑定 ====================== */
+function bindEvents(){
+  document.body.addEventListener('input', e=>{
+    const t=e.target;
+    if(t.dataset.rev){ state.lines[t.dataset.rev].revenue = parseFloat(t.value)||0; }
+    else if(t.dataset.cost){ state.lines[t.dataset.line].costs[t.dataset.cost] = parseFloat(t.value)||0; }
+    else if(t.dataset.ind){ state.indirect[t.dataset.ind][t.dataset.k] = parseFloat(t.value)||0; refreshSubtotals(); }
+    else if(t.dataset.cash){ state.cash[t.dataset.cash] = parseFloat(t.value)||0; }
+    else if(t.id==='taxRate'){ state.taxRate = parseFloat(t.value)||0; }
+    renderResults();
+  });
+
+  document.getElementById('monthPicker').addEventListener('change', e=>{
+    const m=e.target.value; if(!m) return;
+    const loaded=loadMonth(m); state = loaded || defaultState(m);
+    renderAll(); flash('已加载 '+m+(loaded?'':'（新建空白）'));
+  });
+  document.getElementById('btnSave').onclick=()=>{ saveMonth(state); renderMonthList(); flash('已保存 '+state.month); };
+  document.getElementById('btnNew').onclick=()=>{ const m=document.getElementById('monthPicker').value||curMonth(); state=defaultState(m); renderAll(); flash('已新建空白月 '+m); };
+  document.getElementById('btnDel').onclick=()=>{ if(confirm('确认删除 '+state.month+' 的数据？')){ deleteMonth(state.month); renderMonthList(); const idx=getIndex(); if(idx.length){switchMonth(idx[idx.length-1]);}else{state=defaultState(curMonth());renderAll();} flash('已删除'); } };
+  document.getElementById('btnExport').onclick=exportJSON;
+  document.getElementById('btnPublish').onclick=publishToRepo;
+  document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
+  document.getElementById('fileImport').onchange=importJSON;
+  document.getElementById('flowTarget').addEventListener('change', renderFlow);
+}
+
+function flash(msg){ const e=document.getElementById('saveStatus'); e.textContent=msg; setTimeout(()=>e.textContent='',2500); }
+
+/* ====================== 月份列表 / 导入导出 ====================== */
+function renderMonthList(){
+  const box=document.getElementById('monthList'); box.innerHTML='';
+  const idx=getIndex();
+  if(!idx.length){ box.innerHTML='<span style="font-size:12px;color:var(--sub)">暂无已保存月份</span>'; return; }
+  idx.forEach(m=>{
+    const c=document.createElement('span'); c.className='monthchip'+(m===state.month?' active':'');
+    c.textContent=m; c.onclick=()=>switchMonth(m); box.appendChild(c);
+  });
+}
+function switchMonth(m){ const loaded=loadMonth(m); if(loaded){state=loaded; document.getElementById('monthPicker').value=m; renderAll();} }
+function exportJSON(){
+  const idx=getIndex(); const data={version:1, months:{}};
+  idx.forEach(m=> data.months[m]=JSON.parse(localStorage.getItem(keyOf(m))));
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='成本流向数据_'+curMonth()+'.json'; a.click();
+}
+function importJSON(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      Object.entries(data.months||{}).forEach(([m,s])=> saveMonth(s));
+      renderMonthList(); flash('导入完成');
+      const idx=getIndex(); if(idx.length) switchMonth(idx[idx.length-1]);
+    }catch(err){ alert('导入失败：'+err.message); }
+  };
+  reader.readAsText(file);
+}
+function publishToRepo(){
+  const idx=getIndex();
+  if(!idx.length){ flash('没有可发布的数据，请先保存月份'); return; }
+  const data={version:1, months:{}};
+  idx.forEach(m=> data.months[m]=JSON.parse(localStorage.getItem(keyOf(m))));
+  // 无需本地服务器：直接导出仓库格式的 costflow.json，提交到仓库 data/ 即可由 GitHub Pages 同步
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='costflow.json'; a.click();
+  flash('✅ 已导出 costflow.json（仓库格式）。请将其提交到仓库 data/ 目录，线上站即自动更新');
+}
+function loadPublishedData(){
+  return fetch('data/costflow.json').then(r=>{ if(!r.ok) throw new Error('no data'); return r.json(); }).then(d=>{
+    if(d && d.months && typeof d.months==='object'){ Object.entries(d.months).forEach(([m,s])=> saveMonth(s)); }
+  }).catch(()=>{});
+}
+
+/* ====================== 初始化 ====================== */
+function curMonth(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1); }
+function renderAll(){
+  document.getElementById('headerMeta').textContent='当前月份：'+state.month;
+  renderProductCards(); renderIndirect(); renderCash(); refreshSubtotals(); renderResults(); renderMonthList();
+}
+function init(){
+  const m=curMonth();
+  let loaded=loadMonth(m);
+  state = loaded || defaultState(m);
+  document.getElementById('monthPicker').value=state.month;
+  bindEvents();
+  renderAll();
+  // 发布功能已改为「导出 costflow.json」，无需本地服务器，任何来源均可使用
+  // 从仓库载入已发布数据（覆盖本地，使线上站与仓库一致）
+  loadPublishedData().then(()=>{
+    const idx=getIndex();
+    const cur = idx.includes(m)? m : (idx.length? idx[idx.length-1] : m);
+    switchMonth(cur);
+    if(idx.length) flash('已从仓库载入最新数据');
+  });
+}
+init();
+</script>
+</body>
+</html>
